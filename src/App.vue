@@ -31,32 +31,42 @@
 import axios from "axios";
 
 export default {
-  beforeCreate() {
-    let isExchangeRate = window.localStorage.getItem("isExchangeRate") === 'true';
-
-    async function setExchangeRateData() {
-      try {
-        let response = await axios.get('https://api.monobank.ua/bank/currency');
-        window.localStorage.setItem("exchangeRateField", JSON.stringify(response.data));
-        window.localStorage.setItem("isExchangeRate", true);
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    if (isExchangeRate) return false;
-    if (!isExchangeRate) setExchangeRateData();
-  },
-  created() {
-    this.exchangeRateData[0].currencyCodeA = this.exchangeRateData[0].currencyCodeA === 840 ? "USD" : this.exchangeRateData[0].currencyCodeA;
-    this.exchangeRateData[1].currencyCodeA = this.exchangeRateData[1].currencyCodeA === 978 ? "EUR" : this.exchangeRateData[1].currencyCodeA;
-    this.exchangeRateData[2].currencyCodeA = this.exchangeRateData[2].currencyCodeA === 985 ? "PLN" : this.exchangeRateData[2].currencyCodeA;
-  },
   data() {
     return {
       parentMessage: "Exchange rate",
-      exchangeRateData:
-        JSON.parse(window.localStorage.getItem("exchangeRateField")).filter(data => data.currencyCodeA == 840 || (data.currencyCodeA == 978 && data.currencyCodeB == 980) || data.currencyCodeA == 985)
+      exchangeRateData: null
+    }
+  },
+  created() {
+    this.fetchData()
+  },
+  methods: {
+    fetchData () {
+      let self = this;
+      async function setExchangeRateData() {
+        try {
+          let response = await axios.get('https://api.monobank.ua/bank/currency');
+          let filteredData = response.data.filter(data => data.currencyCodeA == 840 || (data.currencyCodeA == 978 && data.currencyCodeB == 980) || data.currencyCodeA == 985)
+
+          window.localStorage.setItem("exchangeRateField", JSON.stringify(filteredData));
+          window.localStorage.setItem("isExchangeRate", true);
+          self.exchangeRateData = filteredData;
+          self.changeDataText();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      let isExchangeRate = window.localStorage.getItem("isExchangeRate") === 'true';
+      if (isExchangeRate) {
+        this.exchangeRateData = JSON.parse(window.localStorage.getItem("exchangeRateField"))
+        this.changeDataText()
+      }
+      if (!isExchangeRate) setExchangeRateData();
+    },
+    changeDataText() {
+      this.exchangeRateData[0].currencyCodeA = this.exchangeRateData[0].currencyCodeA === 840 ? "USD" : this.exchangeRateData[0].currencyCodeA;
+      this.exchangeRateData[1].currencyCodeA = this.exchangeRateData[1].currencyCodeA === 978 ? "EUR" : this.exchangeRateData[1].currencyCodeA;
+      this.exchangeRateData[2].currencyCodeA = this.exchangeRateData[2].currencyCodeA === 985 ? "PLN" : this.exchangeRateData[2].currencyCodeA;
     }
   }
 }
